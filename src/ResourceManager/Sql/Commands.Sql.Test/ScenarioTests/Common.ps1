@@ -223,14 +223,14 @@ Gets the values of the parameters used in the Server Key Vault Key tests
 #>
 function Get-SqlServerKeyVaultKeyTestEnvironmentParameters ()
 {
-	return @{ rgName = Get-ResourceGroupName;
-			  serverName = Get-ServerName;
-			  databaseName = Get-DatabaseName;
-			  keyId = "https://akvtdekeyvault.vault.azure.net/keys/key1/51c2fab9ff3c4a17aab4cd51b932b106";
-			  serverKeyName = "akvtdekeyvault_key1_51c2fab9ff3c4a17aab4cd51b932b106";
-			  vaultName = "akvtdekeyvault";
-			  keyName = "key1"
-			  location = "Southeast Asia";
+	return @{ rgName = "ps-test";
+			  serverName = "ps-tdeakv-svr";
+			  databaseName = "ps-tdeakv-db";
+			  vaultName = "ps-vault";
+			  keyName = "ps-key";
+			  location = "westeurope";
+			  keyId = "https://ps-vault.vault.azure.net/keys/ps-key/65011ae18b5747eba29ea8e5fc85c1a9";
+			  serverKeyName = "ps-vault_ps-key_65011ae18b5747eba29ea8e5fc85c1a9";
 			  }
 }
 
@@ -247,15 +247,28 @@ function Create-ServerKeyVaultKeyTestEnvironment ($params)
 	$serverLogin = "testusername"
 	$serverPassword = "t357ingP@s5w0rd!"
 	$credentials = new-object System.Management.Automation.PSCredential($serverLogin, ($serverPassword | ConvertTo-SecureString -asPlainText -Force)) 
-	$server = New-AzureRmSqlServer -ResourceGroupName  $rg.ResourceGroupName -ServerName $params.serverName -Location $params.location -ServerVersion "12.0" -SqlAdministratorCredentials $credentials
+	$server = New-AzureRmSqlServer -ResourceGroupName  $rg.ResourceGroupName -ServerName $params.serverName -Location $params.location -ServerVersion "12.0" -SqlAdministratorCredentials $credentials -AssignIdentity
 	Assert-AreEqual $server.ServerName $params.serverName
 
 	# Create database
 	$db = New-AzureRmSqlDatabase -ResourceGroupName $rg.ResourceGroupName -ServerName $server.ServerName -DatabaseName $params.databaseName
 	Assert-AreEqual $db.DatabaseName $params.databaseName
 
+	# Create Vault, ACL the current running account to create keys, and the server identity to get,list,wrap,unwwrap
+	$vault = New-AzureRmKeyVault -ResourceGroupName $rg.ResourceGroupName -VaultName $params.vaultName  -Location "centralus"
+	Set-AzureRmKeyVaultAccessPolicy -VaultName $vault.VaultName -ServicePrincipalName $server.Identity.PrincipalId -PermissionsToKeys @("wrapKey", "unwrapKey", "get", "list") 
+	$context = Get-AzureRmContext
+	Set-AzureRmKeyVaultAccessPolicy -VaultName $vault.VaultName -ApplicationId $context.Account.Id -PermissionsToKeys all 
+
+	# Create Key
+	$key = Add-AzureKeyVaultKey -VaultName $vault.VaultName -Name $params.keyName -Destination "Software"
+
+	# Get the created key information
+	$keyId = $key.Key.kid
+	$serverKeyName = "{0}_{1}_{2}" -f $key.VaultName, $key.Name, $key.Version
+
 	# Return the created resource group
-	return $rg
+	return $rg, $keyId, $serverKeyName
 }
 
 <#
@@ -301,6 +314,24 @@ Gets valid failover group name
 function Get-FailoverGroupName
 {
     return getAssetName
+}
+
+<#
+.SYNOPSIS
+Gets valid Key Vault name
+#>
+function Get-KeyVaultName
+{
+	return getAssetName
+}
+
+<#
+.SYNOPSIS
+Gets valid Key Vault Key name
+#>
+function Get-KeyVaultKeyName
+{
+	return getAssetName
 }
 
 <#

@@ -33,6 +33,9 @@ using RestTestFramework = Microsoft.Rest.ClientRuntime.Azure.TestFramework;
 namespace Microsoft.Azure.Commands.ScenarioTest.SqlTests
 {
     using Common.Authentication.Abstractions;
+    using Gallery;
+    using Internal.Subscriptions;
+    using Management.KeyVault;
     using ResourceManager.Common;
     using System.IO;
 
@@ -58,11 +61,15 @@ namespace Microsoft.Azure.Commands.ScenarioTest.SqlTests
         {
             var sqlClient = GetSqlClient(context);
             var sqlLegacyClient = GetLegacySqlClient();
-            var storageClient = GetStorageClient();
             //TODO, Remove the MockDeploymentFactory call when the test is re-recorded
             var resourcesClient = MockDeploymentClientFactory.GetResourceClient(GetResourcesClient());
             var authorizationClient = GetAuthorizationManagementClient();
-            helper.SetupSomeOfManagementClients(sqlClient, sqlLegacyClient, storageClient, resourcesClient, authorizationClient);
+            var keyVaultClient = GetKeyVaultManagementClient(context);
+            helper.SetupSomeOfManagementClients(sqlClient, 
+                sqlLegacyClient, 
+                resourcesClient, 
+                authorizationClient, 
+                keyVaultClient);
         }
         
         protected void RunPowerShellTest(params string[] scripts)
@@ -97,7 +104,8 @@ namespace Microsoft.Azure.Commands.ScenarioTest.SqlTests
                     helper.GetRMModulePath(@"AzureRM.Insights.psd1"),
                     helper.GetRMModulePath(@"AzureRM.Sql.psd1"),
                     "AzureRM.Storage.ps1",
-                    "AzureRM.Resources.ps1");
+                    "AzureRM.Resources.ps1",
+                    helper.GetRMModulePath(@"AzureRM.KeyVault.psd1"));
                 helper.RunPowerShellTest(scripts);
             }
         }
@@ -160,7 +168,7 @@ namespace Microsoft.Azure.Commands.ScenarioTest.SqlTests
             return client;
         }
 
-        protected GraphRbacManagementClient GetGraphClient(RestTestFramework.MockContext context)
+        private GraphRbacManagementClient GetGraphClient(RestTestFramework.MockContext context)
         {
             var environment = RestTestFramework.TestEnvironmentFactory.GetTestEnvironment();
             string tenantId = null;
@@ -178,17 +186,22 @@ namespace Microsoft.Azure.Commands.ScenarioTest.SqlTests
                 if (HttpMockServer.Variables.ContainsKey(TenantIdKey))
                 {
                     tenantId = HttpMockServer.Variables[TenantIdKey];
-                    AzureRmProfileProvider.Instance.Profile.DefaultContext.Tenant.Id = tenantId;
                 }
                 if (HttpMockServer.Variables.ContainsKey(DomainKey))
                 {
                     UserDomain = HttpMockServer.Variables[DomainKey];
-                    AzureRmProfileProvider.Instance.Profile.DefaultContext.Tenant.Directory = UserDomain;
                 }
             }
 
             var client = context.GetGraphServiceClient<GraphRbacManagementClient>(environment);
             client.TenantID = tenantId;
+            if (AzureRmProfileProvider.Instance != null &&
+                AzureRmProfileProvider.Instance.Profile != null &&
+                AzureRmProfileProvider.Instance.Profile.DefaultContext != null &&
+                AzureRmProfileProvider.Instance.Profile.DefaultContext.Tenant != null)
+            {
+                AzureRmProfileProvider.Instance.Profile.DefaultContext.Tenant.Id = client.TenantID;
+            }
             return client;
         }
 
@@ -200,6 +213,19 @@ namespace Microsoft.Azure.Commands.ScenarioTest.SqlTests
             if (HttpMockServer.Mode == HttpRecorderMode.Playback)
             {
                 client.LongRunningOperationInitialTimeout = 0;
+                client.LongRunningOperationRetryTimeout = 0;
+            }
+            return client;
+        }
+
+        protected KeyVaultManagementClient GetKeyVaultManagementClient(RestTestFramework.MockContext context)
+        {
+            var client = 
+                context.GetServiceClient<KeyVaultManagementClient>(
+                    RestTestFramework.TestEnvironmentFactory.GetTestEnvironment());
+
+            if (HttpMockServer.Mode == HttpRecorderMode.Playback)
+            {
                 client.LongRunningOperationRetryTimeout = 0;
             }
             return client;

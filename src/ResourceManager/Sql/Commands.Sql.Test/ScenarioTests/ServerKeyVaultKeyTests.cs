@@ -15,8 +15,15 @@
 using Microsoft.Azure.Commands.ScenarioTest.SqlTests;
 using Microsoft.Azure.ServiceManagemenet.Common.Models;
 using Microsoft.WindowsAzure.Commands.ScenarioTest;
+using RestTestFramework = Microsoft.Rest.ClientRuntime.Azure.TestFramework;
 using Xunit;
 using Xunit.Abstractions;
+using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.Management.KeyVault;
+using Microsoft.Azure.Test.HttpRecorder;
+using Microsoft.Azure.Test;
+using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.Commands.Sql.Test.ScenarioTests
 {
@@ -28,23 +35,9 @@ namespace Microsoft.Azure.Commands.Sql.Test.ScenarioTests
 
         [Fact]
         [Trait(Category.AcceptanceType, Category.CheckIn)]
-        public void TestServerKeyVaultKeyAdd()
+        public void TestServerKeyVaultKeyCrud()
         {
-            RunPowerShellTest("Test-AddServerKeyVaultKey");
-        }
-
-        [Fact]
-        [Trait(Category.AcceptanceType, Category.CheckIn)]
-        public void TestServerKeyVaultKeyGet()
-        {
-            RunPowerShellTest("Test-GetServerKeyVaultKey");
-        }
-
-        [Fact]
-        [Trait(Category.AcceptanceType, Category.CheckIn)]
-        public void TestServerKeyVaultKeyRemove()
-        {
-            RunPowerShellTest("Test-RemoveServerKeyVaultKey");
+            RunPowerShellTest("Test-ServerKeyVaultKeyCrud");
         }
     }
 }

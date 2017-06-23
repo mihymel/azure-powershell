@@ -139,3 +139,65 @@ function Test-RemoveServer
 	}
 }
 
+<#
+	.SYNOPSIS
+	Tests creating a server with an identity
+#>
+function Test-CreateServerWithIdentity
+{
+	# Setup
+	$rg = Create-ResourceGroupForTest
+	 	
+	$serverName = Get-ServerName
+	$version = "12.0"
+	$serverLogin = "testusername"
+	$serverPassword = "t357ingP@s5w0rd!"
+	$credentials = new-object System.Management.Automation.PSCredential($serverLogin, ($serverPassword | ConvertTo-SecureString -asPlainText -Force)) 
+
+	try
+	{
+		# With all parameters
+		$server1 = New-AzureRmSqlServer -ResourceGroupName $rg.ResourceGroupName -ServerName $serverName -Location "northeurope" -ServerVersion $version -SqlAdministratorCredentials $credentials -AssignIdentity
+		Assert-AreEqual $server1.ServerName $serverName
+		Assert-AreEqual $server1.ServerVersion $version
+		Assert-AreEqual $server1.SqlAdministratorLogin $serverLogin
+		Assert-AreEqual $server1.Identity.Type SystemAssigned
+		Assert-NotNull $server1.Identity.PrincipalId
+	}
+	finally
+	{
+		Remove-ResourceGroupForTest $rg
+	}
+}
+
+<#
+	.SYNOPSIS
+	Tests updating a server with an identity
+#>
+function Test-UpdateServerWithIdentity
+{
+	# Setup
+	$rg = Create-ResourceGroupForTest
+	$version = "12.0"
+	$location = "westeurope"
+	$server = Create-ServerForTest $rg $version $location
+
+	try
+	{
+		# Test using parameters
+		$serverPassword = "n3wc00lP@55w0rd"
+		$secureString = ConvertTo-SecureString $serverPassword -AsPlainText -Force
+
+		$server1 = Set-AzureRmSqlServer -ResourceGroupName $rg.ResourceGroupName -ServerName $server.ServerName -SqlAdministratorPassword $secureString -AssignIdentity
+		Assert-AreEqual $server1.ServerName $server.ServerName
+		Assert-AreEqual $server1.ServerVersion $server.ServerVersion
+		Assert-AreEqual $server1.SqlAdministratorLogin $server.SqlAdministratorLogin
+		Assert-AreEqual $server1.Identity.Type SystemAssigned
+		Assert-NotNull $server1.Identity.PrincipalId
+	}
+	finally
+	{
+		Remove-ResourceGroupForTest $rg
+	}
+}
+

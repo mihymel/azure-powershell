@@ -14,75 +14,21 @@
 
 <#
 	.SYNOPSIS
-	Tests creating a server key vault key
-#>
-function Test-AddServerKeyVaultKey
-{
-	$params = Get-SqlServerKeyVaultKeyTestEnvironmentParameters
-	$rg = Create-ServerKeyVaultKeyTestEnvironment $params
-
-	try
-	{
-		$keyResult = Add-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
-		Assert-AreEqual $params.keyId $keyResult.Uri 
-		Assert-AreEqual $params.serverKeyName $keyResult.ServerKeyName 
-	}
-	finally
-	{
-		Remove-ResourceGroupForTest $rg
-	}
-}
-
-<#
-	.SYNOPSIS
-	Tests getting a server key vault key
-#>
-function Test-GetServerKeyVaultKey
-{
-	$params = Get-SqlServerKeyVaultKeyTestEnvironmentParameters
-	$rg = Create-ServerKeyVaultKeyTestEnvironment $params
-
-	try
-	{
-		$keyResult = Add-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
-		Assert-AreEqual $params.keyId $keyResult.Uri
-		Assert-AreEqual $params.serverKeyName $keyResult.ServerKeyName 
-
-		$keyGet = Get-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
-		Assert-AreEqual $params.keyId $keyGet.Uri
-		Assert-AreEqual $params.serverKeyName $keyGet.ServerKeyName
-	}
-	finally
-	{
-		Remove-ResourceGroupForTest $rg
-	}
-}
-
-<#
-	.SYNOPSIS
 	Tests removing a server key vault key
 #>
-function Test-RemoveServerKeyVaultKey
+function Test-ServerKeyVaultKeyCrud
 {
 	$params = Get-SqlServerKeyVaultKeyTestEnvironmentParameters
-	$rg = Create-ServerKeyVaultKeyTestEnvironment $params
 
-	try
-	{
-		$keyResult = Add-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
-		Assert-AreEqual $params.keyId $keyResult.Uri 
-		Assert-AreEqual $params.serverKeyName $keyResult.ServerKeyName 
+	$keyResult = Add-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
+	Assert-AreEqual $params.keyId $keyResult.Uri 
+	Assert-AreEqual $params.serverKeyName $keyResult.ServerKeyName 
 
-		$keyGet = Get-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
-		Assert-AreEqual $params.keyId $keyGet.Uri
-		Assert-AreEqual $params.serverKeyName $keyGet.ServerKeyName
+	$keyGet = Get-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
+	Assert-AreEqual $params.keyId $keyGet.Uri
+	Assert-AreEqual $params.serverKeyName $keyGet.ServerKeyName
 
-		$keyRemove = Remove-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
-		Assert-AreEqual $params.keyId $keyRemove.Uri
-		Assert-AreEqual $params.serverKeyName $keyRemove.ServerKeyName
-	}
-	finally
-	{
-		Remove-ResourceGroupForTest $rg
-	}
+	$keyRemove = Remove-AzureRmSqlServerKeyVaultKey -ServerName $params.serverName -ResourceGroupName $params.rgName -KeyId $params.keyId
+	Assert-AreEqual $params.keyId $keyRemove.Uri
+	Assert-AreEqual $params.serverKeyName $keyRemove.ServerKeyName
 }
